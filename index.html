@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: none; }
+        body { background: #000; color: #fff; margin: 0; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .header { padding: 20px; text-align: center; background: #111; border-bottom: 2px solid #333; }
+        #balance { font-size: 45px; font-weight: 900; color: #f3ba2f; }
+
+        .page { display: none; flex: 1; flex-direction: column; align-items: center; padding: 20px; }
+        .active { display: flex; }
+
+        #coin-area { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; position: relative; }
+        #coin { 
+            width: 250px; height: 250px; background: radial-gradient(circle, #444, #000); 
+            border: 8px solid #f3ba2f; border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; font-size: 120px; cursor: pointer; transition: transform 0.05s;
+        }
+
+        .plus-one { position: absolute; color: #f3ba2f; font-size: 35px; font-weight: bold; animation: fly 0.6s ease-out forwards; pointer-events: none; }
+        @keyframes fly { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-150px); opacity: 0; } }
+
+        .footer { padding: 20px; background: #111; width: 100%; }
+        .en-bar { width: 100%; background: #333; height: 15px; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+        #en-fill { height: 100%; width: 100%; background: #f3ba2f; transition: width 0.1s; }
+
+        .nav { display: flex; background: #111; border-top: 2px solid #333; height: 70px; }
+        .nav-item { flex: 1; display: flex; align-items: center; justify-content: center; color: #666; font-weight: bold; cursor: pointer; }
+        .nav-item.active { color: #f3ba2f; }
+    </style>
+</head>
+<body>
+
+<div class="header"><div id="balance">0</div></div>
+
+<div id="game" class="page active">
+    <div id="coin-area"><div id="coin">🐼</div></div>
+    <div class="footer">
+        <div style="display:flex; justify-content:space-between">
+            <span>⚡ <span id="energy">1000</span>/1000</span>
+            <span>+<span id="pwr">1</span></span>
+        </div>
+        <div class="en-bar"><div id="en-fill"></div></div>
+    </div>
+</div>
+
+<div id="shop" class="page">
+    <h2>Магазин</h2>
+    <button onclick="buyTap()" style="padding:15px; background:#f3ba2f; border:none; border-radius:10px; font-weight:bold; width:100%;">Покращити клік (Cost: <span id="cost">50</span>)</button>
+</div>
+
+<div class="nav">
+    <div class="nav-item active" onclick="show('game')">ГРА</div>
+    <div class="nav-item" onclick="show('shop')">ШОП</div>
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    let coins = Number(localStorage.getItem('c')) || 0;
+    let pwr = Number(localStorage.getItem('p')) || 1;
+    let en = 1000;
+
+    function sync() {
+        document.getElementById('balance').innerText = Math.floor(coins).toLocaleString();
+        document.getElementById('energy').innerText = en;
+        document.getElementById('en-fill').style.width = (en/10) + '%';
+        document.getElementById('pwr').innerText = pwr;
+        document.getElementById('cost').innerText = 50 * pwr;
+        localStorage.setItem('c', coins);
+        localStorage.setItem('p', pwr);
+    }
+
+    function handleTap(e) {
+        if (en >= pwr) {
+            coins += pwr; en -= pwr;
+            const x = e.clientX || e.touches[0].clientX;
+            const y = e.clientY || e.touches[0].clientY;
+            const p = document.createElement('div');
+            p.className = 'plus-one'; p.innerText = +${pwr};
+            p.style.left = x + 'px'; p.style.top = y + 'px';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 600);
+            
+            document.getElementById('coin').style.transform = 'scale(0.95)';
+            setTimeout(() => document.getElementById('coin').style.transform = 'scale(1)', 50);
+            if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            sync();
+        }
+    }
+
+    document.getElementById('coin').addEventListener('pointerdown', handleTap);
+
+    function show(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function buyTap() {
+        if (coins >= 50 * pwr) { coins -= 50 * pwr; pwr++; sync(); }
+    }
+
+    setInterval(() => { if(en < 1000) { en += 2; sync(); } }, 1000);
+    sync();
+</script>
+</body>
+</html>
