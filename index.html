@@ -5,105 +5,158 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* ПОВНЕ БЛОКУВАННЯ СКРОЛУ ТА ЖЕСТІВ */
-        html, body { 
-            margin: 0; padding: 0; width: 100vw; height: 100vh; 
-            overflow: hidden; background: #000; color: #fff;
-            font-family: sans-serif; position: fixed; touch-action: none;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: none; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .header { padding: 20px; text-align: center; background: #111; border-bottom: 2px solid #222; }
+        #balance { font-size: 45px; font-weight: 900; color: #f3ba2f; }
 
-        #app { display: flex; flex-direction: column; height: 100%; width: 100%; align-items: center; }
+        .page { display: none; flex: 1; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; }
+        .active { display: flex !important; }
 
-        .header { padding: 20px; font-size: 40px; font-weight: 900; color: #f3ba2f; z-index: 10; pointer-events: none; }
+        /* Панда */
+        #click-zone { flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+        #coin { width: 260px; height: 260px; border-radius: 50%; border: 8px solid #f3ba2f; display: flex; align-items: center; justify-content: center; font-size: 120px; background: radial-gradient(circle, #333, #000); transition: transform 0.05s; }
 
-        /* Зона кліку на весь центр екрана */
-        #click-zone { 
-            flex: 1; width: 100%; display: flex; align-items: center; 
-            justify-content: center; position: relative; z-index: 5;
-        }
+        .pop { position: absolute; color: #f3ba2f; font-size: 35px; font-weight: 900; animation: fly 0.6s ease-out forwards; pointer-events: none; }
+        @keyframes fly { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-120px); } }
 
-        #coin { 
-            width: 260px; height: 260px; border-radius: 50%; 
-            border: 8px solid #f3ba2f; display: flex; align-items: center; 
-            justify-content: center; font-size: 120px; background: #111;
-            transition: transform 0.05s; pointer-events: none; /* Щоб клік проходив крізь картинку на зону */
-        }
+        /* Статистика */
+        .footer { padding: 20px; width: 100%; background: #111; }
+        .bar-bg { width: 100%; background: #222; height: 12px; border-radius: 10px; margin-top: 8px; overflow: hidden; }
+        #bar-fill { height: 100%; width: 100%; background: #f3ba2f; transition: width 0.2s; }
 
-        .pop {
-            position: absolute; color: #f3ba2f; font-size: 40px; font-weight: 900;
-            pointer-events: none; animation: fly 0.5s ease-out forwards;
-        }
+        /* Картки магазину */
+        .card { background: #1a1a1a; width: 100%; padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
+        .btn { background: #f3ba2f; color: #000; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; }
 
-        @keyframes fly { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-100px); } }
-
-        .footer { padding: 20px; width: 100%; text-align: center; z-index: 10; pointer-events: none; }
+        /* Навігація */
+        .nav { display: flex; background: #111; border-top: 1px solid #222; height: 80px; padding-bottom: 15px; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; font-size: 12px; }
+        .nav-item.active { color: #f3ba2f; }
     </style>
 </head>
 <body>
 
-<div id="app">
-    <div class="header" id="balance">0</div>
-    
-    <div id="click-zone">
-        <div id="coin">🐼</div>
-    </div>
+<div class="header"><div id="balance">0</div></div>
 
+<div id="pg-game" class="page active">
+    <div id="click-zone"><div id="coin">🐼</div></div>
     <div class="footer">
-        ⚡ <span id="energy">1000</span> / 1000
+        <div style="display:flex; justify-content:space-between">
+            <span>⚡ <span id="energy">1000</span> / <span id="max-en">1000</span></span>
+            <span>+<span id="pwr">1</span></span>
+        </div>
+        <div class="bar-bg"><div id="bar-fill"></div></div>
     </div>
 </div>
 
+<div id="pg-shop" class="page">
+    <div class="card">
+        <div><b>Multi-Tap</b><br><small id="t-cost">Ціна: 50</small></div>
+        <button class="btn" onclick="buyTap()">UP</button>
+    </div>
+    <div class="card">
+        <div><b>Max Energy</b><br><small id="e-cost">Ціна: 500</small></div>
+        <button class="btn" onclick="buyEn()">UP</button>
+    </div>
+</div>
+
+<div id="pg-ref" class="page">
+    <h2>Друзі 👥</h2>
+    <div class="card" style="flex-direction:column; text-align:center; gap:10px;">
+        <span>Запрошуй друзів та отримуй <b>+2,500</b> Panda Gold!</span>
+        <button class="btn" style="width:100%" onclick="invite()">Запросити</button>
+    </div>
+</div>
+
+<div class="nav">
+    <div class="nav-item active" onclick="nav('pg-game', this)"><span>🚀</span>Гра</div>
+    <div class="nav-item" onclick="nav('pg-shop', this)"><span>🛒</span>Шоп</div>
+    <div class="nav-item" onclick="nav('pg-ref', this)"><span>👥</span>Рефи</div>
+</div>
+
 <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+    const tg = window.Telegram.WebApp;tg.ready(); tg.expand();
 
     let coins = Number(localStorage.getItem('c')) || 0;
-    let energy = 1000;
-    const balanceEl = document.getElementById('balance');
-    const energyEl = document.getElementById('energy');
-    const coinEl = document.getElementById('coin');
-    const zone = document.getElementById('click-zone');
+    let power = Number(localStorage.getItem('p')) || 1;
+    let maxE = Number(localStorage.getItem('me')) || 1000;
+    let energy = maxE;
 
-    function update() {
-        balanceEl.innerText = coins.toLocaleString();
-        energyEl.innerText = energy;
-        localStorage.setItem('c', coins);
-    }
-
-    // РЕАКЦІЯ НА БУДЬ-ЯКИЙ ТАП У ЗОНІ
-    function handle(e) {
-        if (energy > 0) {
-            coins += 1;
-            energy -= 1;
-
-            // Ефект натискання
-            coinEl.style.transform = 'scale(0.9)';
-            setTimeout(() => coinEl.style.transform = 'scale(1)', 50);
-
-            // Анімація цифри (+1)
-            const x = e.touches ? e.touches[0].clientX : e.clientX;
-            const y = e.touches ? e.touches[0].clientY : e.clientY;
-            const p = document.createElement('div');
-            p.className = 'pop'; p.innerText = '+1';
-            p.style.left = x + 'px'; p.style.top = y + 'px';
-            document.body.appendChild(p);
-            setTimeout(() => p.remove(), 500);
-
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-            update();
+    // ПЕРЕВІРКА РЕФЕРАЛА ПРИ ПЕРШОМУ ВХОДІ
+    if (!localStorage.getItem('ref_done')) {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('tgWebAppStartParam')) {
+            coins += 2500;
+            localStorage.setItem('ref_done', 'true');
+            tg.showAlert("Ви отримали бонус +2,500 за перехід!");
         }
     }
 
-    // Вішаємо подію на всю центральну зону
-    zone.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // КРИТИЧНО: вимикає скрол бота
-        handle(e);
-    }, { passive: false });
+    function sync() {
+        document.getElementById('balance').innerText = Math.floor(coins).toLocaleString();
+        document.getElementById('energy').innerText = Math.floor(energy);
+        document.getElementById('max-en').innerText = maxE;
+        document.getElementById('pwr').innerText = power;
+        document.getElementById('bar-fill').style.width = (energy / maxE * 100) + '%';
+        document.getElementById('t-cost').innerText = "Ціна: " + (50 * power);
+        document.getElementById('e-cost').innerText = "Ціна: " + (maxE / 2);
+        
+        localStorage.setItem('c', coins);
+        localStorage.setItem('p', power);
+        localStorage.setItem('me', maxE);
+    }
 
-    zone.addEventListener('mousedown', handle);
+    const zone = document.getElementById('click-zone');
+    const coin = document.getElementById('coin');
 
-    update();
+    function tap(e) {
+        if (energy >= power) {
+            coins += power; energy -= power;
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const p = document.createElement('div');
+            p.className = 'pop'; p.innerText = +${power};
+            p.style.left = x + 'px'; p.style.top = y + 'px';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 600);
+
+            coin.style.transform = 'scale(0.92)';
+            setTimeout(() => coin.style.transform = 'scale(1)', 50);
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            sync();
+        }
+    }
+
+    zone.addEventListener('touchstart', (e) => { e.preventDefault(); tap(e); }, { passive: false });
+    zone.addEventListener('mousedown', tap);
+
+    function nav(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        el.classList.add('active');
+    }
+
+    function buyTap() {
+        let cost = 50 * power;
+        if (coins >= cost) { coins -= cost; power++; sync(); }
+    }
+
+    function buyEn() {
+        let cost = maxE / 2;
+        if (coins >= cost) { coins -= cost; maxE += 500; energy = maxE; sync(); }
+    }
+
+    function invite() {
+        const botLink = https://t.me/Clicker_teken_bot?start=ref; // ТУТ ТВІЙ БОТ
+        tg.openTelegramLink(`https://t.me/share/url?url=${botLink}&text=Стань директором біржі разом зі мною! 🐼💰`);
+    }
+
+    setInterval(() => { if (energy < maxE) { energy = Math.min(maxE, energy + 2); sync(); } }, 1000);
+    sync();
 </script>
 </body>
 </html>
